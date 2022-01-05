@@ -26,6 +26,7 @@
 #include <DNSServer.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+
 //define các input và output
 #define relayBom 33
 #define relayDen 25
@@ -33,9 +34,9 @@
 #define relayBonphan 27
 #define Dongmai 18
 #define Momai 19
-#define DHTPIN 32
+#define DHTPIN 14
 #define DHTTYPE DHT11
-#define SOIL_MOIST_1_PIN 35
+#define SOIL_MOIST_1_PIN 32
 #define CTHT1 39
 #define CTHT2 34
 #define cambienmua 36
@@ -48,11 +49,12 @@ float temp;
 unsigned long time1 = 0;
 //boolean flag = false;
 //int pinValue;
-float pinValue1;
+//float pinValue1;
 //int pinValue2;
 float null;
 float MOIST = 2;
-const String Ver = "v1.0.2";
+float TEMPERATURE = 22.5;
+float HUMIDITY = 75;
 bool processing = 0;
 
 //github
@@ -230,6 +232,30 @@ BLYNK_WRITE(V1)                     //  ham nay duoc goi den khi Widget Vo thay 
     MOIST = 2;
   }
 }
+
+//thông số độ ẩm
+BLYNK_WRITE(V4)                     //  ham nay duoc goi den khi Widget Vo thay doi trang thai
+{
+  float pinValue4 = param.asFloat();
+  if (pinValue4 != null) {
+    HUMIDITY = pinValue4;
+  }
+  else {
+    HUMIDITY = 75;
+  }
+}
+
+//thông số nhiệt độ
+BLYNK_WRITE(V7)                     //  ham nay duoc goi den khi Widget Vo thay doi trang thai
+{
+  float pinValue7 = param.asFloat();
+  if (pinValue7 != null) {
+    TEMPERATURE = pinValue7;
+  }
+  else {
+    TEMPERATURE = 22.5;
+  }
+}
 ////    if ( (unsigned long) (millis() - time1) > 10000)
 ////    {
 ////
@@ -260,6 +286,8 @@ void loop()
   thingConnect();
   Serial.print("Giá trị MOIST: ");
   Serial.println(MOIST);
+  Serial.print("Giá trị TEMPERATURE: ");
+  Serial.println(TEMPERATURE);
 }
 
 void ledbonphan(){
@@ -302,8 +330,8 @@ void autoMai(){
 float temperature;
 temperature = dht.readTemperature();
 float cambienmuaStatus = analogRead(cambienmua);
-Serial.print("Giá trị mưa: ");
-Serial.println(cambienmuaStatus);
+//Serial.print("Giá trị mưa: ");
+//Serial.println(cambienmuaStatus);
 if (temperature < 15 || temperature > 27 || cambienmuaStatus > 30){
   digitalWrite(Dongmai, HIGH);
   digitalWrite(Momai, LOW);
@@ -330,7 +358,7 @@ if (temperature > 15 && temperature <27 || cambienmuaStatus < 20){
 void autoQuat(){
   float humidity;
   humidity = dht.readHumidity();
- if ( humidity > 75 ){
+ if ( humidity > HUMIDITY ){
   digitalWrite(relayQuat, LOW);
  }
  else {
@@ -345,15 +373,15 @@ void autoDen(){
   float cambienmuaStatus = analogRead(cambienmua);
   float temperature;
   temperature = dht.readTemperature();
-  if (cambienmuaStatus > 20 && temperature > 22.5 || temperature > 22.5)
-  {
-    digitalWrite(relayDen, LOW); 
-  }
-//  if (temperature > 22.5)
+//  if (cambienmuaStatus > 20 && temperature > 22.5 || temperature > 22.5)
 //  {
 //    digitalWrite(relayDen, LOW); 
 //  }
-  else if (temperature < 22.5 || temperature > 24){
+  if (temperature > TEMPERATURE)
+  {
+    digitalWrite(relayDen, LOW); 
+  }
+  else if (temperature < TEMPERATURE || temperature > 24){
     digitalWrite(relayDen, HIGH);
   }
 }
@@ -380,9 +408,10 @@ float getMoist() {
     delay(50);
   }
   anaValue = anaValue / (i);
-  anaValue = map(anaValue, 0, 4095, 0, 100);
-  anaValue = 100 - anaValue;
-  return anaValue;
+  float percent = map(anaValue, 0, 4095, 0, 100);
+  percent = 100 - percent;
+  return percent;
+
 }
 void thingConnect() {
   if (client1.connect(server, 80)) {
